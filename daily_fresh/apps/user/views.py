@@ -18,7 +18,7 @@ class RegisterView(View):
     """注册页面"""
     def get(self, request):
 
-        return render(request, 'user/register.html')
+        return render(request, 'register.html')
 
     # web开发视图处理中通用的流程
     # 1 接收数据
@@ -33,10 +33,10 @@ class RegisterView(View):
         # 2进行数据校验
         # 校验数据完整性
         if not all([username, password, email]):
-            return render(request, 'user/register.html', {'errmsg': '数据不完整'})
+            return render(request, 'register.html', {'errmsg': '数据不完整'})
         # 校验邮箱
         if not re.match(r'^[a-z0-9][\w.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
-            return render(request, 'user/register.html', {'errmsg': '邮箱格式不正确'})
+            return render(request, 'register.html', {'errmsg': '邮箱格式不正确'})
         # 校验用户名是否存在
         try:
             user = User.objects.get(username=username)
@@ -45,7 +45,7 @@ class RegisterView(View):
             # 用户名不存在
             user = None
         if user:
-            return render(request, 'user/register.html', {'errmsg': '用户名已存在'})
+            return render(request, 'register.html', {'errmsg': '用户名已存在'})
 
         # 3业务处理
         user = User.objects.create_user(username, email, password)
@@ -104,7 +104,7 @@ class Login(View):
         else:
             username = ''
             checked = ''
-        return render(request, 'user/login.html', {'username': username, 'checked': checked})
+        return render(request, 'login.html', {'username': username, 'checked': checked})
 
     def post(self, request):
         # 接收参数
@@ -113,7 +113,7 @@ class Login(View):
 
         # 参数校验
         if not all([username, password]):
-            return render(request, 'user/login.html', {'errmsg': '参数不完整'})
+            return render(request, 'login.html', {'errmsg': '参数不完整'})
         # 业务处理：登录校验
         # 根据用户名和密码查找用户的信息
         user = authenticate(username=username, password=password)
@@ -139,9 +139,9 @@ class Login(View):
             else:
                 # 账户未激活
 
-                return render(request, 'user/login.html', {'errmsg': '账户未激活'})
+                return render(request, 'login.html', {'errmsg': '账户未激活'})
         else:
-            return render(request, 'user/login.html', {'errmsg': '用户名或密码错误'})
+            return render(request, 'login.html', {'errmsg': '用户名或密码错误'})
 
 
 # /user/logout
@@ -178,26 +178,25 @@ class UserInfo(LoginRequiredMixin, View):
                    'skus': skus}
 
         # 使用模板
-        return render(request, 'user/user_center_info.html', context)
+        return render(request, 'user_center_info.html', context)
 
 
 class UserOrder(LoginRequiredMixin, View):
     """订单中心"""
     def get(self, request):
-        return render(request, 'user/user_center_order.html')
+        return render(request, 'user_center_order.html')
 
 
 class UserSite(LoginRequiredMixin, View):
     """收货地址"""
     def get(self, request):
         user = request.user
-        address = Address.objects.get_default_address(user)
+        address = Address.objects.get_default_address(user=user)
         # 组织模板上下文
-        context = {'page': 'address',
-                   'address': address}
+        context = {'address': address}
 
         # 使用模板
-        return render(request, 'user/user_center_site.html', context)
+        return render(request, 'user_center_site.html', context)
 
     def post(self, request):
         """地址添加"""
@@ -209,7 +208,7 @@ class UserSite(LoginRequiredMixin, View):
 
         # 参数校验
         if not all([receiver, addr, phone]):
-            return render(request, 'user/user_center_site.html', {'errmsg': '数据不完整'})
+            return render(request, 'user_center_site.html', {'errmsg': '数据不完整'})
         user = request.user
         # try:
         #     address = Address.objects.get(user=user, is_default=True)
@@ -217,7 +216,7 @@ class UserSite(LoginRequiredMixin, View):
         #     # 用户不存在默认收货地址
         #     address = None
 
-        address = Address.objects.get_default_address(user)
+        address = Address.objects.get_default_address(user=user)
 
         is_default = True
         if address:

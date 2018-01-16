@@ -3,7 +3,7 @@
 {% load static from staticfiles %}
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
-	<title>天天生鲜-注册haha</title>
+	<title>天天生鲜-注册</title>
 	<link rel="stylesheet" type="text/css" href="{% static 'css/reset.css' %}">
 	<link rel="stylesheet" type="text/css" href="{% static 'css/main.css' %}">
 	<script type="text/javascript" src="{% static 'js/jquery-1.12.4.min.js' %}"></script>
@@ -23,7 +23,7 @@
 				<a href="{% url 'user:login' %}">登录</a>
 			</div>
 			<div class="reg_form clearfix">
-				<form method="post" action="{% url 'user:register' %}">
+				<form method="post" action="{% url 'user:login' %}">
                     {% csrf_token %}
 				<ul>
 					<li>
@@ -54,7 +54,6 @@
 					<li class="reg_sub">
 						<input type="submit" value="注 册" name="">
 					</li>
-                    {{ errmsg }}
 				</ul>				
 				</form>
 			</div>

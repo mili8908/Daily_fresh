@@ -4,14 +4,14 @@ from django.http import JsonResponse, HttpResponse
 
 def index(request):
 
-    return render(request, 'goods/index.html')
+    return render(request, 'index.html')
 
 
 def goods_list(requset):
 
-    return render(requset, 'goods/list.html')
+    return render(requset, 'list.html')
 
 
 def goods_detail(requset):
 
-    return render(requset, 'goods/detail.html')
+    return render(requset, 'detail.html')
