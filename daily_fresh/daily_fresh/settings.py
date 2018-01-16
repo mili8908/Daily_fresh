@@ -127,15 +127,15 @@ TINYMCE_DEFAULT_CONFIG = {
 # 发送邮件的配置
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # 使用的SMTP服务器的地址
-EMAIL_HOST = 'smtp.163.com'
+EMAIL_HOST = 'smtp.126.com'
 # SMTP服务的端口
 EMAIL_PORT = 25
 # 发送邮件的邮箱
-EMAIL_HOST_USER = 'fendou8908@163.com'
+EMAIL_HOST_USER = 'fendou8908@126.com'
 # 在邮箱中设置的客户端授权密码
 EMAIL_HOST_PASSWORD = 'fendou8908'
 # 收件人看到的发件人
-EMAIL_FROM = 'dailyfresh<fendou8908@126.com>'
+EMAIL_FROM = 'fresh<fendou8908@126.com>'
 
 
 # 设置redis作为django的缓存设置
@@ -154,3 +154,5 @@ CACHES = {
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 
+# 指定项目登录页面的url地址
+LOGIN_URL = '/user/login'

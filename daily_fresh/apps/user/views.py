@@ -3,11 +3,15 @@ from django.shortcuts import render, redirect
 from django.views.generic import View
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login, logout
-from .models import User
+from .models import User, Address
+from apps.goods.models import GoodsSKU
 import re
 from django.conf import settings
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired
+from celery_tasks.tasks import send_register_active_email
+from utils.mixin import LoginRequiredMixin
+from django_redis import get_redis_connection
 
 
 class RegisterView(View):
@@ -52,15 +56,15 @@ class RegisterView(View):
         # 激活链接: /user/active/用户id, 如果直接写用户id，其他人可能恶意请求网站
         # 解决方式: 先对用户身份信息加密，把加密后的信息放在激活链接中
         # /user/active/token信息
-
         # 使用itsdangerous生成激活的token信息
         serializer = Serializer(settings.SECRET_KEY, 3600)
         info = {'confirm': user.id}
         # 进行加密
-        token = serializer.dump(info)  # bytes类型数据
+        token = serializer.dumps(info)  # bytes类型数据
         # 通过解码转换成str类型
         token = token.decode()
         send_register_active_email.delay(email, username, token)
+
         # 4返回应答  跳转回首页
         # return redirect('../goods/index')
         return redirect(reverse('user:login'))
@@ -119,8 +123,9 @@ class Login(View):
                 # 记住用户登录状态
                 login(request, user)
                 # 返回应答：跳转到首页
+                next_url = request.GET.get('next', reverse('goods:index'))
                 # HttpResposeRedirect类->HttpResponse类的子类
-                response = redirect(reverse('goods:index'))
+                response = redirect(next_url)
                 # 判断是否需要记住用户名
                 remember = request.POST.get('checked')
                 if remember == 'on':
@@ -149,17 +154,82 @@ class Logout(View):
         return redirect(reverse('user:login'))
 
 
-
-def user_info(request):
+class UserInfo(LoginRequiredMixin, View):
     """用户信息中心"""
-    return render(request, 'user/user_center_info.html')
+    def get(self, request):
+        # 获取登录的用户
+        user = request.user
+        address = Address.objects.get_default_address(user=user)
+        conn = get_redis_connection('default')
+        # 拼接list的key
+        history_key = 'history_%d' % user.id
+        sku_ids = conn.lrange(history_key, 0, 4)
+
+        skus = []
+        for sku_id in sku_ids:
+            # 根据sku_id获取商品的信息
+            sku = GoodsSKU.objects.get(id=sku_id)
+            # 追加元素
+            skus.append(sku)
+
+        # 组织模板上下文
+        context = {'page': 'user',
+                   'address': address,
+                   'skus': skus}
+
+        # 使用模板
+        return render(request, 'user/user_center_info.html', context)
 
 
-def user_order(request):
+class UserOrder(LoginRequiredMixin, View):
     """订单中心"""
-    return render(request, 'user/user_center_order.html')
+    def get(self, request):
+        return render(request, 'user/user_center_order.html')
 
 
-def user_site(request):
+class UserSite(LoginRequiredMixin, View):
     """收货地址"""
-    return render(request, 'user/user_center_site.html')
+    def get(self, request):
+        user = request.user
+        address = Address.objects.get_default_address(user)
+        # 组织模板上下文
+        context = {'page': 'address',
+                   'address': address}
+
+        # 使用模板
+        return render(request, 'user/user_center_site.html', context)
+
+    def post(self, request):
+        """地址添加"""
+        # 接收参数
+        receiver = request.POST.get('receiver')
+        addr = request.POST.get('addr')
+        zip_code = request.POST.get('zip_code')
+        phone = request.POST.get('phone')
+
+        # 参数校验
+        if not all([receiver, addr, phone]):
+            return render(request, 'user/user_center_site.html', {'errmsg': '数据不完整'})
+        user = request.user
+        # try:
+        #     address = Address.objects.get(user=user, is_default=True)
+        # except Address.DoesNotExist:
+        #     # 用户不存在默认收货地址
+        #     address = None
+
+        address = Address.objects.get_default_address(user)
+
+        is_default = True
+        if address:
+            is_default = False
+
+        # 添加收货地址
+        Address.objects.create(user=user,
+                               receiver=receiver,
+                               addr=addr,
+                               zip_code=zip_code,
+                               phone=phone,
+                               is_default=is_default)
+
+        # 返回应答：刷新地址页面，重定向是get访问
+        return redirect(reverse('user:user_center_site'))

@@ -9,9 +9,9 @@ def index(request):
 
 def goods_list(requset):
 
-    return HttpResponse('ok')
+    return render(requset, 'goods/list.html')
 
 
 def goods_detail(requset):
 
-    return HttpResponse('ok')
+    return render(requset, 'goods/detail.html')
