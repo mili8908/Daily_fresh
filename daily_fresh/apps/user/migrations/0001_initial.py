@@ -2,9 +2,9 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
-from django.conf import settings
 import django.utils.timezone
 import django.core.validators
+from django.conf import settings
 import django.contrib.auth.models
 
 
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                 ('addr', models.CharField(verbose_name='收货地址', max_length=256)),
                 ('zip_code', models.CharField(verbose_name='邮编', max_length=6)),
                 ('phone', models.CharField(verbose_name='电话', max_length=11)),
-                ('id_default', models.BooleanField(verbose_name='是否默认', default=False)),
+                ('is_default', models.BooleanField(verbose_name='是否默认', default=False)),
                 ('user', models.ForeignKey(verbose_name='所属用户', to=settings.AUTH_USER_MODEL)),
             ],
             options={

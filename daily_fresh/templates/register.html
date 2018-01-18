@@ -23,7 +23,7 @@
 				<a href="{% url 'user:login' %}">登录</a>
 			</div>
 			<div class="reg_form clearfix">
-				<form method="post" action="{% url 'user:login' %}">
+				<form method="post" action="{% url 'user:register' %}">
                     {% csrf_token %}
 				<ul>
 					<li>
@@ -51,6 +51,7 @@
 						<label>同意”天天生鲜用户使用协议“</label>
 						<span class="error_tip2">提示信息</span>
 					</li>
+                    {{ errmsg }}
 					<li class="reg_sub">
 						<input type="submit" value="注 册" name="">
 					</li>

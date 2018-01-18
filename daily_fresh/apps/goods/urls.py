@@ -1,9 +1,9 @@
 from django.conf.urls import url
-from . import views
+from .views import IndexView, GoodsListView, GoodsDetailView
 
 
 urlpatterns = [
-    url(r'^$', views.index, name='index'),  # 主页
-    url(r'^list$', views.goods_list, name='list'),  # 商品列表
-    url(r'^detail$', views.goods_detail, name='detail')  # 商品详情
+    url(r'^$', IndexView.as_view(), name='index'),  # 主页
+    url(r'^list$', GoodsListView.as_view(), name='list'),  # 商品列表
+    url(r'^detail$', GoodsDetailView.as_view(), name='detail')  # 商品详情
 ]

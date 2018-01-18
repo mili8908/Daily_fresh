@@ -15,7 +15,7 @@ import os
 import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
+# sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -156,3 +156,12 @@ SESSION_CACHE_ALIAS = "default"
 
 # 指定项目登录页面的url地址
 LOGIN_URL = '/user/login'
+
+# 设置文件存储类
+DEFAULT_FILE_STORAGE = 'utils.fdfs.storage.FDFSStorage'
+
+# 设置FDFS客户端配置文件的路径
+FDFS_CLIENT_CONF = os.path.join(BASE_DIR, 'utils/fdfs/client.conf')
+
+# 设置FDFS服务器上Nginx的ip和port
+FDFS_NGINX_URL = 'http://127.0.0.1:8888/'

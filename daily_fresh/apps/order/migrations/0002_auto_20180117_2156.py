@@ -8,10 +8,10 @@ from django.conf import settings
 class Migration(migrations.Migration):
 
     dependencies = [
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('user', '0001_initial'),
         ('order', '0001_initial'),
         ('goods', '0001_initial'),
+        ('user', '0001_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
