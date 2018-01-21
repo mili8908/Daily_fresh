@@ -38,6 +38,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'haystack',  # 控制搜索引擎的框架
     'tinymce',  # 富文本编辑器
     'apps.user',  # 用户模块
     'apps.goods',  # 商品模块
@@ -165,3 +166,16 @@ FDFS_CLIENT_CONF = os.path.join(BASE_DIR, 'utils/fdfs/client.conf')
 
 # 设置FDFS服务器上Nginx的ip和port
 FDFS_NGINX_URL = 'http://127.0.0.1:8888/'
+
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+
+        # 使用whoosh引擎 路径
+        'ENGINE': 'haystack.backends.whoosh_cn_backend.WhooshEngine',
+        # 索引文件路径
+        'PATH': os.path.join(BASE_DIR, 'whoosh_index'),
+    }
+}
+# 当添加、修改、删除数据时，自动生成索引
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'

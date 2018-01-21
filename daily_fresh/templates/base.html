@@ -33,7 +33,7 @@
 					<span>|</span>
 					<a href="{% url 'user:user_center_info' %}">用户中心</a>
 					<span>|</span>
-					<a href="#">我的购物车</a>
+					<a href="{% url 'cart:show' %}">我的购物车</a>
 					<span>|</span>
 					<a href="{% url 'user:user_center_order' %}">我的订单</a>
 				</div>
@@ -44,14 +44,16 @@
 {# 搜索 #}
 {% block search_bar %}
 	<div class="search_bar clearfix">
-		<a href="index.html" class="logo fl"><img src="{% static 'images/logo.png' %}"></a>
+		<a href="{% url 'goods:index' %}" class="logo fl"><img src="{% static 'images/logo.png' %}"></a>
 		<div class="search_con fl">
-			<input type="text" class="input_text fl" name="" placeholder="搜索商品">
-			<input type="button" class="input_btn fr" name="" value="搜索">
+			<form method="get" action="search">
+            <input type="text" class="input_text fl" name="q" placeholder="搜索商品">
+			<input type="submit" class="input_btn fr" name="" value="搜索">
+            </form>
 		</div>
 		<div class="guest_cart fr">
-			<a href="#" class="cart_name fl">我的购物车</a>
-			<div class="goods_count fl" id="show_count">1</div>
+			<a href="{% url 'cart:show' %}" class="cart_name fl">我的购物车</a>
+			<div class="goods_count fl" id="show_count">{{ cart_count }}</div>
 		</div>
 	</div>
 {% endblock search_bar %}
@@ -70,6 +72,7 @@
 		<p>CopyRight © 2016 北京天天生鲜信息技术有限公司 All Rights Reserved</p>
 		<p>电话：010-****888    京ICP备*******8号</p>
 	</div>
-{% block bottom_file %}{% endblock bottom_file %}
+{% block bottom %}{% endblock bottom %}
 </body>
 </html>
+{% block bottom_file %}{% endblock bottom_file %}
