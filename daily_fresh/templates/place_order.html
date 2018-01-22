@@ -1,4 +1,6 @@
 {% extends 'base_center.html' %}
+{% load static from staticfiles %}
+
 {% block title %}天天生鲜-提交订单MiLi{% endblock title %}
 {% block body %}
 	
@@ -63,7 +65,8 @@
 	</div>
 
 	<div class="order_submit clearfix">
-		<a href="javascript:;" sku_ids="{{ sku_ids }}" id="order_btn">提交订单</a>
+        {% csrf_token %}
+        <a href="javascript:;" sku_ids="{{ sku_ids }}" id="order_btn">提交订单</a>
 	</div>	
 {% endblock body %}
 
@@ -75,7 +78,7 @@
 		
 		<div class="mask"></div>
 	</div>
-	<script type="text/javascript" src="js/jquery-1.12.2.js"></script>
+	<script type="text/javascript" src="{% static 'js/jquery-1.12.4.min.js' %}"></script>
 	<script type="text/javascript">
 		$('#order_btn').click(function() {
             // 获取用户选择的收货地址id, 支付方式，购买的商品的ids
@@ -91,27 +94,29 @@
 
             // 发起ajax post请求，访问/order/commit，传递参数: addr_id, pay_method, sku_ids
             $.post('/order/commit', params, function (data) {
+                // alert(data.res);
                 if (data.res == 5) {
                     // 创建成功
-                    alert('订单创建成功')
+                    // alert('ok')
+                    localStorage.setItem('order_finish',2);
+
+                    $('.popup_con').fadeIn('fast', function() {
+
+                        setTimeout(function(){
+                            $('.popup_con').fadeOut('fast',function(){
+                                window.location.href = '/user/user_center_order/1';
+                            });
+                        },3000)
+
+                    });
                 }
                 else {
                     alert(data.errmsg)
                 }
             })
-
+            });
         /*$('#order_btn').click(function() {
-			localStorage.setItem('order_finish',2);
+			*/
 
-			$('.popup_con').fadeIn('fast', function() {
-
-				setTimeout(function(){
-					$('.popup_con').fadeOut('fast',function(){
-						window.location.href = 'index.html';
-					});	
-				},3000)
-				
-			});
-		});*/
 	</script>
 {% endblock bottom_file %}

@@ -5,6 +5,10 @@ from utils.mixin import LoginRequiredMixin
 from django_redis import get_redis_connection
 from apps.goods.models import GoodsSKU
 from apps.user.models import Address
+from apps.order.models import OrderInfo, OrderGoods
+from django.db import transaction
+from django.http import JsonResponse
+from datetime import datetime
 
 
 class OrderPlaceView(LoginRequiredMixin, View):
@@ -105,6 +109,86 @@ class OrderPlaceView(LoginRequiredMixin, View):
     # todo: 删除购物车中对应记录
 
 
-# class OrderCommitView(View):
-#     """订单创建"""
-#     def post(self, request):
+class OrderCommitView(View):
+    """订单创建"""
+    def post(self, request):
+        user = request.user
+        if not user.is_authenticated():
+            return JsonResponse({'res': 0, 'errmsg': '用户未登录'})
+        # 接收数据
+        addr_id = request.POST.get('addr_id')
+        pay_method = request.POST.get('pay_method')
+        sku_ids = request.POST.get('sku_ids')
+        # 验证数据
+        if not all([addr_id, pay_method, sku_ids]):
+            return JsonResponse({'res': 1, 'errmsg': '数据不完整'})
+        try:
+            addr = Address.objects.get(id=addr_id)
+        except Address.DoesNotExist:
+            return JsonResponse({'res': 2, 'errmsg': '地址id不存在'})
+        if pay_method not in OrderInfo.PAY_METHODS.keys():
+            return JsonResponse({'res': 3, 'errmsg': '数据非法'})
+        # 组织生成订单参数
+        # 订单id: 20180121120530 + 用户id
+        order_id = datetime.now().strftime('%Y%m%d%H%M%S') + str(user.id)
+        transit_price = 10
+        # 订单中商品的总数目和总金额
+        total_count = 0
+        total_price = 0
+        order = OrderInfo.objects.create(order_id=order_id,
+                                         user=user,
+                                         addr=addr,
+                                         pay_method=pay_method,
+                                         total_count=total_count,
+                                         total_price=total_price,
+                                         transit_price=transit_price,
+                                         )
+        sku_ids = sku_ids.split(',')
+        # 获取连接对象
+        conn = get_redis_connection('default')
+        # 拼接key
+        cart_key = 'cart_%d' % user.id
+        for sku_id in sku_ids:
+            try:
+                sku = GoodsSKU.objects.get(id=sku_id)
+            except GoodsSKU.DoesNotExist:
+                return JsonResponse({'res': 4, 'errmsg': '商品不存在'})
+            count = conn.hget(cart_key, sku_id)
+            total_count += int(count)
+            # 向df_order_goods表中添加一条记录
+            OrderGoods.objects.create(order=order,
+                                      sku=sku,
+                                      count=int(count),
+                                      price=sku.price)
+            # 减少对应商品的库存，增加销量
+            sku.stock -= int(count)
+            sku.sales += int(count)
+            sku.save()
+            # 累加计算用户要购买的商品的总数目和总金额
+            total_count += int(count)
+            total_price += int(count)*sku.price
+        # 更新订单信息记录中的购买的商品的总数目和总金额
+        order.total_count = total_count
+        order.total_price = total_price
+        order.save()
+        # 删除购物车中对应记录
+        conn.hdel(cart_key, *sku_ids)
+        # 返回应答
+        return JsonResponse({'res': 5, 'message': '订单创建成功'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -183,7 +183,7 @@ class UserInfo(LoginRequiredMixin, View):
 
 class UserOrder(LoginRequiredMixin, View):
     """订单中心"""
-    def get(self, request):
+    def get(self, request, page):
         return render(request, 'user_center_order.html')
 
 
