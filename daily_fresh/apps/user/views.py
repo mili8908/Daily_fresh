@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login, logout
 from .models import User, Address
 from apps.goods.models import GoodsSKU
+from apps.order.models import OrderInfo, OrderGoods
 import re
 from django.conf import settings
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
@@ -184,7 +185,58 @@ class UserInfo(LoginRequiredMixin, View):
 class UserOrder(LoginRequiredMixin, View):
     """订单中心"""
     def get(self, request, page):
-        return render(request, 'user_center_order.html')
+        # 获取登录用户
+        user = request.user
+        # 获取用户的订单信息
+        orders = OrderInfo.objects.filter(user=user).order_by('-creat_time')
+        # 获取用户的每个商品的订单信息
+        for order in orders:
+            # 获取order订单商品信息
+            order_skus = OrderGoods.objects.filter(order=order)
+            # 遍历order_skus计算订单中每个商品的小计
+            for order_sku in order_skus:
+                # 计算商品的小计
+                amount = order_sku.count*order_sku.price
+                # 给order_sku增加属性amount，保存订单商品的小计
+                order_sku.amount = amount
+            # 获取订单状态标题
+            order.status_name = OrderInfo.ORDER_STATUS[order.order_status]
+            # 计算订单实付款
+            order.total_pay = order.total_price + order.transit_price
+            # 给order增加属性order_skus,保存订单商品的信息
+            order.order_skus = order_skus
+        # 分页处理
+        from django.core.paginator import Paginator
+        paginator = Paginator(orders, 1)
+
+        # 校验页码
+        page = int(page)
+        if page > paginator.num_pages:
+            page = 1
+
+        # 获取第page页的内容, 得到Page对象
+        order_page = paginator.page(page)
+        # # 页码过多时页面上最多显示5个页码
+        # 1. 分页之后总页数不足5页，显示全部页码
+        # 2. 当前是前3页，显示1-5页
+        # 3. 当前是后3页，显示后5页
+        # 4. 其他情况，显示当前页前2页，当前页，当前页后2页
+        num_pages = paginator.num_pages
+        if num_pages < 5:
+            pages = range(1, num_pages + 1)
+        elif page <= 3:
+            pages = range(1, 6)
+        elif num_pages - page <= 2:
+            pages = range(num_pages - 4, num_pages + 1)
+        else:
+            pages = range(page - 2, page + 3)
+
+        # 组织上下文
+        context = {'order_page': order_page,
+                   'pages': pages,
+                   'page': 'order'}
+
+        return render(request, 'user_center_order.html', context)
 
 
 class UserSite(LoginRequiredMixin, View):
