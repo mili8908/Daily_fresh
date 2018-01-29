@@ -88,6 +88,7 @@
                     window.open(data.pay_url)
                     // 发起ajax post请求，访问/order/check, 获取用户支付的结果, 传递订单id
                     $.post('/order/check', params, function (data){
+                        // alert(data.res)
                         if (data.res == 3) {
                             alert('支付成功')
                             // 刷新页面

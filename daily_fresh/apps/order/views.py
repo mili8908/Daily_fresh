@@ -9,6 +9,10 @@ from apps.order.models import OrderInfo, OrderGoods
 from django.db import transaction
 from django.http import JsonResponse
 from datetime import datetime
+from alipay import AliPay
+from django.conf import settings
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 class OrderPlaceView(LoginRequiredMixin, View):
@@ -327,8 +331,136 @@ class OrderCommitView(View):
         return JsonResponse({'res': 5, 'message': '订单创建成功'})
 
 
+# 前端传递的参数: 订单id(order_id)
+# 采用ajax post请求
+# /order/pay
+class OrderPayView(View):
+    """订单支付"""
+    def post(self, request):
+        """订单支付"""
+        # 获取user
+        user = request.user
+        if not user.is_authenticated():
+            return JsonResponse({'res': 0, 'errmsg': '用户未登录'})
+        # 接收参数
+        order_id = request.POST.get('order_id')
+        # 参数校验
+        if not all([order_id]):
+            return JsonResponse({'res': 1, 'errmsg': '数据不完整'})
+        # 检验订单信息
+        try:
+            order = OrderInfo.objects.get(order_id=order_id,
+                                          user=user,
+                                          pay_method=3,
+                                          order_status=1)
+        except OrderInfo.DoesNotExist:
+            return JsonResponse({'res': 2, 'errmsg': '无效的订单id'})
+
+        # 业务处理: 调用支付宝的下单支付接口
+        # 初始化
+        alipay = AliPay(
+            appid="2016091000482503",  # 沙箱id
+            app_notify_url=None,  # 默认回调url
+            app_private_key_path=settings.APP_PRIVATE_KEY_PATH,  # 应用私钥文件路径
+            alipay_public_key_path=settings.ALIPAY_PUBLIC_KEY_PATH,  # 支付宝的公钥，验证支付宝回传消息使用，不是你自己的公钥,
+            sign_type="RSA2",  # RSA 或者 RSA2 签名
+            debug=True  # 默认False, True代表沙箱环境
+        )
+        # 调用支付宝接口
+        total_pay = order.total_price + order.transit_price  # decimal
+        # 调用支付宝alipay.trade.page.pay的接口
+        # 电脑网站支付，需要跳转到https://openapi.alipaydev.com/gateway.do? + order_string
+        order_string = alipay.api_alipay_trade_page_pay(
+            out_trade_no=order_id,  # 订单id
+            total_amount=str(total_pay),  # 订单总金额
+            subject='天天生鲜%s' % order_id,  # 订单标题
+            return_url=None,
+            notify_url=None  # 可选, 不填则使用默认notify url
+        )
+
+        # 支付页面地址
+        pay_url = 'https://openapi.alipaydev.com/gateway.do?' + order_string
+
+        # 返回应答
+        return JsonResponse({'res': 3, 'pay_url': pay_url})
 
 
+class OrderCheckView(View):
+    """支付结果查询"""
+    def post(self, request):
+        user = request.user
+        if not user.is_authenticated():
+            return JsonResponse({'res': 0, 'errmsg': '用户未登录'})
+        # 获取参数
+        order_id = request.POST.get('order_id')
+        if not all([order_id]):
+            return JsonResponse({'res': 1, 'errmsg': '数据不完整'})
+        try:
+            order = OrderInfo.objects.get(order_id=order_id,
+                                          user=user,
+                                          order_status=1,
+                                          pay_method=3)
+        except OrderInfo.DoesNotExist:
+            return JsonResponse({'res': 2, 'errmsg': '无效订单id'})
+
+        # 业务处理: 调用支付宝的下单支付接口
+        # 初始化
+        alipay = AliPay(
+            appid="2016091000482503",  # 沙箱id
+            app_notify_url=None,  # 默认回调url
+            app_private_key_path=settings.APP_PRIVATE_KEY_PATH,  # 应用私钥文件路径
+            alipay_public_key_path=settings.ALIPAY_PUBLIC_KEY_PATH,  # 支付宝的公钥，验证支付宝回传消息使用，不是你自己的公钥,
+            sign_type="RSA2",  # RSA 或者 RSA2 签名
+            debug=True  # 默认False, True代表沙箱环境
+        )
+        # 交易查询
+        # {
+        #     "trade_no": "2017032121001004070200176844", # 支付宝交易号
+        #     "code": "10000", # 网关返回码
+        #     "invoice_amount": "20.00",
+        #     "open_id": "20880072506750308812798160715407",
+        #     "fund_bill_list": [
+        #         {
+        #             "amount": "20.00",
+        #             "fund_channel": "ALIPAYACCOUNT"
+        #         }
+        #     ],
+        #     "buyer_logon_id": "csq***@sandbox.com",
+        #     "send_pay_date": "2017-03-21 13:29:17",
+        #     "receipt_amount": "20.00",
+        #     "out_trade_no": "out_trade_no15",
+        #     "buyer_pay_amount": "20.00",
+        #     "buyer_user_id": "2088102169481075",
+        #     "msg": "Success",
+        #     "point_amount": "0.00",
+        #     "trade_status": "TRADE_SUCCESS", # 交易状态
+        #     "total_amount": "20.00"
+        # }
+        while True:
+            response = alipay.api_alipay_trade_query(out_trade_no=order_id)
+
+            # 获取网关返回码
+            code = response.get('code')
+            # print('code:%s'%code)
+
+            if code == '10000' and response.get('trade_status') == "TRADE_SUCCESS":
+                # 获取支付宝交易号
+                trade_no = response.get('trade_no')
+                # 获取订单支付状态，设置支付宝交易号
+                order.order_status = 4  # 待评价
+                order.trade_no = trade_no
+                order.save()
+                # 返回应答
+                return JsonResponse({'res': 3, 'message': '支付成功'})
+            elif code == '40004' or (code == '10000' and response.get('trade_status') == 'WAIT_BUYER_PAY'):
+                # code == '40004' 支付交易还未创建，过一会之后就会创建
+                # 等待买家付款，过一会之后再次查询
+                import time
+                time.sleep(5)
+                continue
+            else:
+                # 支付失败
+                return JsonResponse({'res': 4, 'errmsg': '支付失败'})
 
 
 
